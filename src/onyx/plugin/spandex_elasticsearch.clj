@@ -74,6 +74,17 @@
   (poll! [this segment _]
     ))
 
+(defn- merge-with-defaults
+  [event doc-defaults]
+  (if (or (= :delete (:elasticsearch/write-type event)) (contains? event :elasticsearch/message))
+    (merge doc-defaults (select-keys 
+                         event [:elasticsearch/index
+                                :elasticsearch/id
+                                :elasticsearch/mapping-type
+                                :elasticsearch/write-type
+                                :elasticsearch/message]))
+    (assoc doc-defaults :elasticsearch/message event)))
+
 (defrecord ElasticSearchWriter []
   p/Plugin
   (start [this event] this) 
@@ -93,9 +104,9 @@
   (prepare-batch [this event replica messenger] 
     true)
   (write-batch 
-    [this {:keys [onyx.core/write-batch elasticsearch/connection]} replica messenger]
+    [this {:keys [onyx.core/write-batch elasticsearch/connection elasticsearch/doc-defaults]} replica messenger]
     (doseq [event write-batch]
-      (sp/request connection (rest-request event)))
+      (sp/request connection (rest-request (merge-with-defaults event doc-defaults))))
     true))
 
 (defn output [event]

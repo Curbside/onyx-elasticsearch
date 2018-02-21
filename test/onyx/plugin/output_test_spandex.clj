@@ -83,16 +83,18 @@
 
 (def es-rest-port 9200)
 
+(def test-index :output_test)
+
 (def write-elastic-opts
   {:elasticsearch/host es-host
    :elasticsearch/port es-rest-port})
 
-(def test-index :output_test)
+(def write-elastic-opts-default
+  {:elasticsearch/host es-host
+   :elasticsearch/port es-rest-port
+   :elasticsearch/index test-index})
 
 (def test-set
-  (map get-document-rest-request (range 4) ["John" "Maria" "Peter" "Sasquatch"]))
-
-(def test-set2
   [{:elasticsearch/message {:name "http:insert_detail-msg_noid" :index "one"}
     :elasticsearch/index test-index
     :elasticsearch/mapping-type :group
@@ -122,19 +124,34 @@
     :elasticsearch/write-type :delete
     :elasticsearch/id "3"}])
 
+(def default-test
+  [{:elasticsearch/message {:name "http:insert_detail-msg_noindex" :index "default_one"}
+    :elasticsearch/mapping-type :group
+    :elasticsearch/write-type :index}])
+
 (defn index-documents []
   (let [n-messages 5
         task-opts {:onyx/batch-size 20}
-        job (build-job [[:in :write-elastic]]
-                       [{:name :in
-                         :type :seq 
-                         :task-opts task-opts 
-                         :input test-set2} 
-                        {:name :write-elastic
-                         :type :elastic
-                         :task-opts (merge task-opts write-elastic-opts)}]
-                       :onyx.task-scheduler/balanced)]
-    (run-test-job job 3)
+        job-write (build-job [[:in :write-elastic]]
+                                        [{:name :in
+                                          :type :seq 
+                                          :task-opts task-opts 
+                                          :input test-set} 
+                                         {:name :write-elastic
+                                          :type :elastic
+                                          :task-opts (merge task-opts write-elastic-opts)}]
+                        :onyx.task-scheduler/balanced)
+        job-write-default (build-job [[:in :write-elastic]]
+                               [{:name :in
+                                 :type :seq 
+                                 :task-opts task-opts 
+                                 :input default-test} 
+                                {:name :write-elastic
+                                 :type :elastic
+                                 :task-opts (merge task-opts write-elastic-opts-default)}]
+                               :onyx.task-scheduler/balanced)]
+    (run-test-job job-write 3)
+    (run-test-job job-write-default 3)
     ; Wait for Elasticsearch to update
     (Thread/sleep 7000)))
 
@@ -167,4 +184,10 @@
         (is (= 1 (get-in body [:hits :total])))))
     (testing "Delete: detail defined"
       (let [{:keys [:body]} (search client {:query {:match {:_id "3"}}})]
-        (is (= 0 (get-in body [:hits :total])))))))
+        (is (= 0 (get-in body [:hits :total]))))))
+
+  (deftest check-write-defaults
+    (testing "Insert: plain message with no index in segment but defined in opts"
+      (let [{:keys [:body]} (search client {:query {:match {:index "default_one"}}})]
+        (is (= 1 (get-in body [:hits :total])))
+        (is (not-empty (first (get-in body [:hits :hits]))))))))

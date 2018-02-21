@@ -10,7 +10,7 @@
      id :elasticsearch/id
      mapping-type :elasticsearch/mapping-type
      write-type :elasticsearch/write-type
-     :or {mapping-type "_default_"
+     :or {mapping-type :_default_
           write-type :index}} :onyx.core/task-map} _]
   (log/info (str "Creating ElasticSearch http client for " host ":" port))
   {:elasticsearch/connection (sp/client {:hosts [(str "http://" host ":" port)]})
