@@ -55,6 +55,25 @@
      :method (rest-method write-type id)
      :body (cond-> (or message {}) (contains? #{:update :upsert} write-type) wrap-update (= :upsert write-type) (assoc :doc_as_upsert true))}))
 
+(defrecord ElasticSearchReader []
+  p/Plugin
+  (start [this event] this)
+  (stop [this event] this)
+  
+  p/Checkpointed
+  (recover! [this replica-version checkpoint])
+  (checkpoint [this])
+  (checkpointed! [this epoch])
+
+  p/BarrierSynchronization
+  (synced? [this epoch]
+    true)
+  (completed? [this] true)
+
+  p/Input
+  (poll! [this segment _]
+    ))
+
 (defrecord ElasticSearchWriter []
   p/Plugin
   (start [this event] this) 
