@@ -1,0 +1,3 @@
+1. Create tests for default functionality when injecting the writer
+2. Create tests for when there is no id on the catalog, a delete is specified, and an id is specified in the segment map
+3. Ensure that all pre conditions on the inject writer are appropriate for that function or if they should be added when checking the incoming segment

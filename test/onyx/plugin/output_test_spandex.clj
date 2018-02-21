@@ -43,26 +43,6 @@
 
 (def batch-size 20)
 
-(def catalog-base
-  [{:onyx/name :in
-    :onyx/plugin :onyx.plugin.core-async/input
-    :onyx/type :input
-    :onyx/medium :core.async
-    :onyx/batch-size batch-size
-    :onyx/max-peers 1
-    :onyx/doc "Reads segments from a core.async channel"}
-
-   {:onyx/name :write-messages
-    :onyx/plugin :onyx.plugin.elasticsearch/write-messages
-    :onyx/type :output
-    :onyx/medium :elasticsearch
-    :elasticsearch/host es-host
-    :elasticsearch/index id
-    :elasticsearch/mapping "_default_"
-    :onyx/batch-size batch-size
-    :onyx/max-peers 1
-    :onyx/doc "Writes documents to elasticsearch"}])
-
 (defn build-job [workflow compact-job task-scheduler]
   (reduce (fn [job {:keys [name task-opts type args] :as task}]
             (case type
