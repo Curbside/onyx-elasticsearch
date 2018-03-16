@@ -39,8 +39,11 @@
     :delete delete-request
     (throw (Exception. (str "Invalid write type: " write-type)))))
 
-(defn- wrap-update [x]
-  {:doc x})
+(defn- wrap-update [write-type message]
+  (let [doc {:doc message}]
+    (if (= write-type :upsert) 
+      (assoc doc :doc_as_upsert true)
+      doc)))
 
 (s/defn rest-request
   "Takes in a settings map and returns a REST request to send to the spandex client."
@@ -51,9 +54,12 @@
                 :elasticsearch/write-type
                 :elasticsearch/id
                 :elasticsearch/message]} options]
-    {:url (cond-> [index mapping-type] (some? id) (conj id) (= :update write-type) (conj :_update))
+    {:url (cond-> [index mapping-type] (some? id) (conj id) (contains? #{:update :upsert} write-type) (conj :_update))
      :method (rest-method write-type id)
-     :body (cond-> (or message {}) (contains? #{:update :upsert} write-type) wrap-update (= :upsert write-type) (assoc :doc_as_upsert true))}))
+     :body (let [doc (or message {})] 
+             (if (contains? #{:update :upsert} write-type)
+               (wrap-update write-type doc)
+               doc))}))
 
 (defrecord ElasticSearchReader []
   p/Plugin
