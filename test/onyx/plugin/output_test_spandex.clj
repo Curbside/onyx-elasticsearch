@@ -165,7 +165,7 @@
 (use-fixtures :once (fn [f]
                       (index-documents)
                       (f)
-                      ))
+                      (delete-index test-index)))
 
 (let [client (spdx/client {:hosts [(str "http://" es-host ":" es-rest-port)]})]
 
