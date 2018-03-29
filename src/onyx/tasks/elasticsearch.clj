@@ -11,7 +11,7 @@
      write-type :elasticsearch/write-type
      :or {mapping-type :_default_
           write-type :index}} :onyx.core/task-map} _]
-  (log/info (str "Creating ElasticSearch http client for " host ":" port))
+  (log/info (str "Creating ElasticSearch http client for " host))
   {:elasticsearch/connection (sp/client {:hosts [host]})
    :elasticsearch/doc-defaults (merge {:elasticsearch/mapping-type mapping-type
                                        :elasticsearch/write-type write-type}
