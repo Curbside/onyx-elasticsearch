@@ -17,12 +17,6 @@
 
 (def zk-addr "127.0.0.1:2188")
 
-(def es-host "127.0.0.1")
-
-(def es-rest-port 9200)
-
-(def es-native-port 9300)
-
 (def env-config
   {:onyx/tenancy-id id
    :zookeeper/address zk-addr
@@ -79,19 +73,15 @@
    :elasticsearch/id doc-id
    :elasticsearch/message {:name name}})
 
-(def es-host "127.0.0.1")
-
-(def es-rest-port 9200)
+(def es-host "http://127.0.0.1:9200")
 
 (def test-index :output_test)
 
 (def write-elastic-opts
-  {:elasticsearch/host es-host
-   :elasticsearch/port es-rest-port})
+  {:elasticsearch/host es-host})
 
 (def write-elastic-opts-default
   {:elasticsearch/host es-host
-   :elasticsearch/port es-rest-port
    :elasticsearch/index test-index})
 
 (def test-set
@@ -144,7 +134,7 @@
         job-write-default (build-job [[:in :write-elastic]]
                                [{:name :in
                                  :type :seq 
-                                 :task-opts task-opts 
+                                 :task-opts task-opts
                                  :input default-test} 
                                 {:name :write-elastic
                                  :type :elastic
@@ -156,7 +146,7 @@
     (Thread/sleep 7000)))
 
 (defn delete-index [index]
-  (let [client (spdx/client {:hosts [(str "http://" es-host ":" es-rest-port)]})]
+  (let [client (spdx/client {:hosts [es-host]})]
     (spdx/request client {:url [index] :method :delete})))
 
 (defn- search [client body]
@@ -167,7 +157,7 @@
                       (f)
                       (delete-index test-index)))
 
-(let [client (spdx/client {:hosts [(str "http://" es-host ":" es-rest-port)]})]
+(let [client (spdx/client {:hosts [es-host]})]
 
   (deftest check-http&write-job
     (testing "Insert: plain message with no id defined"
