@@ -1,7 +1,8 @@
 (ns onyx.tasks.elasticsearch
   (:require [schema.core :as s]
             [taoensso.timbre :as log]
-            [qbits.spandex :as sp]))
+            [qbits.spandex :as sp]
+            [onyx.plugin.spandex-elasticsearch]))
 
 (defn inject-writer
   [{{host :elasticsearch/host
