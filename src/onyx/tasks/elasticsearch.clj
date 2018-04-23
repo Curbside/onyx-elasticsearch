@@ -29,7 +29,6 @@
                             :onyx/plugin :onyx.plugin.spandex-elasticsearch/output
                             :onyx/type :output
                             :onyx/medium :elasticsearch
-                            :onyx/max-peers 1
                             :onyx/doc "Writes segments to an Elasticsearch cluster."}
                            opts)
           :lifecycles [{:lifecycle/task task-name
