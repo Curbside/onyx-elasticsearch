@@ -116,5 +116,5 @@
       (sp/request connection (rest-request (merge-with-defaults event doc-defaults))))
     true))
 
-(defn output [event]
+(defn output []
   (->ElasticSearchWriter))
