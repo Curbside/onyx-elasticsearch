@@ -112,7 +112,7 @@
   (write-batch 
     [this {:keys [onyx.core/write-batch elasticsearch/connection elasticsearch/doc-defaults]} replica messenger]
     (doseq [event write-batch]
-      (println event)
+      (log/info event)
       (sp/request connection (rest-request (merge-with-defaults event doc-defaults))))
     true))
 
