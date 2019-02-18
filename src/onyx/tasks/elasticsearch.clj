@@ -1,11 +1,14 @@
 (ns onyx.tasks.elasticsearch
-  (:require [schema.core :as s]
-            [taoensso.timbre :as log]
-            [qbits.spandex :as sp]
-            [onyx.plugin.spandex-elasticsearch]))
+  (:require
+   [onyx.plugin.spandex-elasticsearch]
+   [qbits.spandex :as sp]
+   [schema.core :as s]
+   [taoensso.timbre :as log]))
 
 (defn inject-writer
   [{{host :elasticsearch/host
+     user :elasticsearch/user
+     password :elasticsearch/password
      index :elasticsearch/index
      id :elasticsearch/id
      mapping-type :elasticsearch/mapping-type
@@ -13,11 +16,18 @@
      :or {mapping-type :_default_
           write-type :index}} :onyx.core/task-map} _]
   (log/info (str "Creating ElasticSearch http client for " host))
-  {:elasticsearch/connection (sp/client {:hosts [host]})
-   :elasticsearch/doc-defaults (merge {:elasticsearch/mapping-type mapping-type
-                                       :elasticsearch/write-type write-type}
-                                      (when index {:elasticsearch/index index})
-                                      (when id {:elasticsearch/id id}))})
+  ;; supports auth/no-auth scenarios
+  (let [conf (if (every? nil? [user password])
+               {:hosts [host]}
+               {:hosts [host]
+                :request {:authentication? true}
+                :http-client {:basic-auth {:user user
+                                           :password password}}})]
+    {:elasticsearch/connection (sp/client conf)
+     :elasticsearch/doc-defaults (merge {:elasticsearch/mapping-type mapping-type
+                                         :elasticsearch/write-type write-type}
+                                        (when index {:elasticsearch/index index})
+                                        (when id {:elasticsearch/id id}))}))
 
 (def writer-lifecycles
   {:lifecycle/before-task-start inject-writer})
