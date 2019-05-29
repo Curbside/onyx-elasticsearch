@@ -1,6 +1,6 @@
 (ns onyx.tasks.elasticsearch
   (:require
-   [onyx.plugin.spandex-elasticsearch]
+   [onyx.plugin.elasticsearch]
    [qbits.spandex :as sp]
    [schema.core :as s]
    [taoensso.timbre :as log]))
@@ -36,7 +36,7 @@
   [task-name :- s/Keyword opts]
   (println opts)
   {:task {:task-map (merge {:onyx/name task-name
-                            :onyx/plugin :onyx.plugin.spandex-elasticsearch/output
+                            :onyx/plugin :onyx.plugin.elasticsearch/output
                             :onyx/type :output
                             :onyx/medium :elasticsearch
                             :onyx/doc "Writes segments to an Elasticsearch cluster."}
