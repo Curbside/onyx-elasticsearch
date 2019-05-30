@@ -119,7 +119,7 @@
     :elasticsearch/mapping-type :group
     :elasticsearch/write-type :index}])
 
-(defn index-documents []
+(defn index-documents [bulk?]
   (let [n-messages 5
         task-opts {:onyx/batch-size 20}
         job-write (build-job [[:in :write-elastic]]
@@ -138,7 +138,7 @@
                                        :input default-test}
                                       {:name :write-elastic
                                        :type :elastic
-                                       :task-opts (merge task-opts write-elastic-opts-default)}]
+                                       :task-opts (merge task-opts write-elastic-opts-default {:elasticsearch/bulk bulk?})}]
                                      :onyx.task-scheduler/balanced)]
     (run-test-job job-write 3)
     (run-test-job job-write-default 3)
@@ -152,8 +152,12 @@
 (defn- search [client body]
   (spdx/request client {:url [test-index :group :_search] :method :get :body body}))
 
+;; tests are ran twice, first in a non-bulk context, then with bulk enabled
 (use-fixtures :once (fn [f]
-                      (index-documents)
+                      (index-documents false)
+                      (f)
+                      (delete-index test-index)
+                      (index-documents true)
                       (f)
                       (delete-index test-index)))
 

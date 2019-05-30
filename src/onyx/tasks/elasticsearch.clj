@@ -11,6 +11,7 @@
      password :elasticsearch/password
      index :elasticsearch/index
      id :elasticsearch/id
+     bulk :elasticsearch/bulk
      mapping-type :elasticsearch/mapping-type
      write-type :elasticsearch/write-type
      :or {mapping-type :_default_
@@ -24,6 +25,7 @@
                 :http-client {:basic-auth {:user user
                                            :password password}}})]
     {:elasticsearch/connection (sp/client conf)
+     :elasticsearch/bulk bulk
      :elasticsearch/doc-defaults (merge {:elasticsearch/mapping-type mapping-type
                                          :elasticsearch/write-type write-type}
                                         (when index {:elasticsearch/index index})
