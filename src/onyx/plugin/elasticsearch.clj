@@ -42,17 +42,13 @@
 
 (defn- wrap-update
   "Update type of actions need to have the document nested in a {:doc ...} map"
-  [write-type message]
-  (let [doc {:doc message}]
-    (if (= write-type :upsert)
-      (assoc doc :doc_as_upsert true)
-      doc)))
+  [message write-type]
+  (cond->  {:doc message}
+    (= write-type :upsert) (assoc :doc_as_upsert true)))
 
 (defn- wrap-message [message write-type]
-  (let [doc (or message {})]
-    (if (contains? #{:update :upsert} write-type)
-      (wrap-update write-type doc)
-      doc)))
+  (cond-> (or message {})
+    (contains? #{:update :upsert} write-type) (wrap-update write-type)))
 
 (s/defn rest-request
   "Takes in a settings map and returns a REST request to send to the spandex client."
@@ -70,14 +66,18 @@
 (defn bulk-request-format
   "Takes in a settings map and returns a sequence with action and an optional message(source) depending on the action.
    See https://www.elastic.co/guide/en/elasticsearch/reference/6.2/docs-bulk.html"
-  [options]
+  [{:keys [:elasticsearch/index
+           :elasticsearch/mapping-type
+           :elasticsearch/write-type
+           :elasticsearch/id
+           :elasticsearch/message] :as options}]
   (s/validate (validation-schema options) options)
-  (let [{:keys [:elasticsearch/index
-                :elasticsearch/mapping-type
-                :elasticsearch/write-type
-                :elasticsearch/id
-                :elasticsearch/message]} options]
-    (cond-> [{(if (= write-type :upsert) :update write-type) {:_index index :_type mapping-type :_id id}}]
+  (let [op (if (= write-type :upsert)
+             :update
+             write-type)]
+    (cond-> [{op {:_index index
+                  :_type mapping-type
+                  :_id id}}]
       (some? message) (conj (wrap-message message write-type)))))
 
 (defrecord ElasticSearchReader []
