@@ -1,4 +1,4 @@
-(defproject curbside/onyx-elasticsearch "0.13.0.0-alpha3+writer"
+(defproject curbside/onyx-elasticsearch "0.13.0.0"
   :description "Onyx plugin for Elasticsearch"
   :url "https://github.com/onyx-platform/onyx-elasticsearch"
   :license {:name "Eclipse Public License"
