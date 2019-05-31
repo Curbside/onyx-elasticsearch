@@ -131,7 +131,7 @@
     [this {:keys [onyx.core/write-batch elasticsearch/connection elasticsearch/bulk elasticsearch/doc-defaults]} replica messenger]
     (if bulk
       (when (not-empty write-batch)
-        (let [bulk-body (flatten (map #(bulk-request-format (merge-with-defaults % doc-defaults)) write-batch))
+        (let [bulk-body (mapcat #(bulk-request-format (merge-with-defaults % doc-defaults)) write-batch)
               chunks (sp/chunks->body bulk-body)]
           (sp/request connection {:url "/_bulk"
                                   :method :put
