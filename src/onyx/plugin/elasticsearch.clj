@@ -40,11 +40,15 @@
     :delete delete-request
     (throw (Exception. (str "Invalid write type: " write-type)))))
 
-(defn- wrap-update [write-type message]
-  (let [doc {:doc message}]
-    (if (= write-type :upsert)
-      (assoc doc :doc_as_upsert true)
-      doc)))
+(defn- wrap-update
+  "Update type of actions need to have the document nested in a {:doc ...} map"
+  [message write-type]
+  (cond->  {:doc message}
+    (= write-type :upsert) (assoc :doc_as_upsert true)))
+
+(defn- wrap-message [message write-type]
+  (cond-> (or message {})
+    (contains? #{:update :upsert} write-type) (wrap-update write-type)))
 
 (s/defn rest-request
   "Takes in a settings map and returns a REST request to send to the spandex client."
@@ -57,10 +61,24 @@
                 :elasticsearch/message]} options]
     {:url    (cond-> [index mapping-type] (some? id) (conj id) (contains? #{:update :upsert} write-type) (conj :_update))
      :method (rest-method write-type id)
-     :body   (let [doc (or message {})]
-               (if (contains? #{:update :upsert} write-type)
-                 (wrap-update write-type doc)
-                 doc))}))
+     :body   (wrap-message message write-type)}))
+
+(defn bulk-request-format
+  "Takes in a settings map and returns a sequence with action and an optional message(source) depending on the action.
+   See https://www.elastic.co/guide/en/elasticsearch/reference/6.2/docs-bulk.html"
+  [{:keys [:elasticsearch/index
+           :elasticsearch/mapping-type
+           :elasticsearch/write-type
+           :elasticsearch/id
+           :elasticsearch/message] :as options}]
+  (s/validate (validation-schema options) options)
+  (let [op (if (= write-type :upsert)
+             :update
+             write-type)]
+    (cond-> [{op {:_index index
+                  :_type mapping-type
+                  :_id id}}]
+      (some? message) (conj (wrap-message message write-type)))))
 
 (defrecord ElasticSearchReader []
   p/Plugin
@@ -110,9 +128,17 @@
   (prepare-batch [this event replica messenger]
     true)
   (write-batch
-    [this {:keys [onyx.core/write-batch elasticsearch/connection elasticsearch/doc-defaults]} replica messenger]
-    (doseq [event write-batch]
-      (sp/request connection (rest-request (merge-with-defaults event doc-defaults))))
+    [this {:keys [onyx.core/write-batch elasticsearch/connection elasticsearch/bulk elasticsearch/doc-defaults]} replica messenger]
+    (if bulk
+      (when (not-empty write-batch)
+        (let [bulk-body (mapcat #(bulk-request-format (merge-with-defaults % doc-defaults)) write-batch)
+              chunks (sp/chunks->body bulk-body)]
+          (sp/request connection {:url "/_bulk"
+                                  :method :put
+                                  :headers {"Content-Type" "application/x-ndjson"}
+                                  :body chunks})))
+      (doseq [event write-batch]
+        (sp/request connection (rest-request (merge-with-defaults event doc-defaults)))))
     true))
 
 (defn output [event]

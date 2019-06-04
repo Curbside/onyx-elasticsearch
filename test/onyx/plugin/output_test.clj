@@ -119,31 +119,35 @@
     :elasticsearch/mapping-type :group
     :elasticsearch/write-type :index}])
 
-(defn index-documents []
-  (let [n-messages 5
-        task-opts {:onyx/batch-size 20}
-        job-write (build-job [[:in :write-elastic]]
-                             [{:name :in
-                               :type :seq
-                               :task-opts task-opts
-                               :input test-set}
-                              {:name :write-elastic
-                               :type :elastic
-                               :task-opts (merge task-opts write-elastic-opts)}]
-                             :onyx.task-scheduler/balanced)
-        job-write-default (build-job [[:in :write-elastic]]
-                                     [{:name :in
-                                       :type :seq
-                                       :task-opts task-opts
-                                       :input default-test}
-                                      {:name :write-elastic
-                                       :type :elastic
-                                       :task-opts (merge task-opts write-elastic-opts-default)}]
-                                     :onyx.task-scheduler/balanced)]
-    (run-test-job job-write 3)
-    (run-test-job job-write-default 3)
-    ; Wait for Elasticsearch to update
-    (Thread/sleep 7000)))
+
+(defn- index-documents
+  ([] (index-documents false))
+  ([bulk?] (let [n-messages 5
+                 task-opts {:onyx/batch-size 20}
+                 job-write (build-job [[:in :write-elastic]]
+                                      [{:name :in
+                                        :type :seq
+                                        :task-opts task-opts
+                                        :input test-set}
+                                       {:name :write-elastic
+                                        :type :elastic
+                                        :task-opts (merge task-opts write-elastic-opts)}]
+                                      :onyx.task-scheduler/balanced)
+                 job-write-default (build-job [[:in :write-elastic]]
+                                              [{:name :in
+                                                :type :seq
+                                                :task-opts task-opts
+                                                :input default-test}
+                                               {:name :write-elastic
+                                                :type :elastic
+                                                :task-opts (merge task-opts write-elastic-opts-default {:elasticsearch/bulk bulk?})}]
+                                              :onyx.task-scheduler/balanced)]
+             (run-test-job job-write 3)
+             (run-test-job job-write-default 3)
+             ;; Wait for Elasticsearch to update
+             (Thread/sleep 7000))))
+
+(defn- index-documents-bulk [] (index-documents true))
 
 (defn delete-index [index]
   (let [client (spdx/client {:hosts [es-host]})]
@@ -152,8 +156,12 @@
 (defn- search [client body]
   (spdx/request client {:url [test-index :group :_search] :method :get :body body}))
 
+;; tests are ran twice, first in a non-bulk context, then with bulk enabled
 (use-fixtures :once (fn [f]
                       (index-documents)
+                      (f)
+                      (delete-index test-index)
+                      (index-documents-bulk)
                       (f)
                       (delete-index test-index)))
 
