@@ -21,7 +21,7 @@
                          :elasticsearch/write-type   s/Keyword})
 
 (def index-request (merge base-write-request {(s/optional-key :elasticsearch/id) s/Any
-                                              :elasticsearch/message             {s/Keyword s/Any}}))
+                                              :elasticsearch/message             s/Any}))
 
 (def update-request (merge base-write-request {:elasticsearch/id      s/Any
                                                :elasticsearch/message {s/Keyword s/Any}}))

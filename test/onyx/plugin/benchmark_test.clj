@@ -53,11 +53,15 @@
            :task-scheduler task-scheduler}
           compact-job))
 
+
+
+
 (defn run-test-job [job n-peers]
   (let [id (random-uuid)
         env-config env-config
         peer-config peer-config]
     (with-test-env [test-env [n-peers env-config peer-config]]
+
                    (let [{:keys [job-id]} (onyx.api/submit-job peer-config job)
                          _ (assert job-id "Job was not successfully submitted")
                          _ (onyx.test-helper/feedback-exception! peer-config job-id)
@@ -94,17 +98,22 @@
 (def data-file (io/resource
                 "documents.json"))
 (defn get-documents []
-  (json/read-str (slurp data-file)))
+  (let [docs (json/read-str (slurp data-file))]
+
+    (clojure.pprint/pprint docs)
+    docs
+    ))
 
 (defn- index-documents
   ([] (index-documents false))
-  ([bulk?] (let [n-messages 5
+  ([bulk?] (let [documents (get-documents)
                  input (map #(merge {:elasticsearch/message %
-                                     :elasticsearch/id (:id %)}
+                                     :elasticsearch/id (.toString (java.util.UUID/randomUUID))}
                                     {:elasticsearch/index test-index
                                      :elasticsearch/mapping-type :group
-                                     :elasticsearch/write-type :index}) (get-documents))
-                 task-opts {:onyx/batch-size 20}
+                                     :elasticsearch/write-type :index}) documents)
+                 task-opts {:onyx/batch-size 20
+                            :elasticsearch/bulk true}
                  job-write (build-job [[:in :write-elastic]]
                                       [{:name :in
                                         :type :seq
